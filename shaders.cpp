@@ -2,33 +2,49 @@
 
 void irrExampleCB::m_getMatrices()
 {
-	matrix4 world = driver->getTransform(ETS_WORLD);
-	m_inv = world;
+	m_world = driver->getTransform(ETS_WORLD);
+	m_view = driver->getTransform(ETS_VIEW);
+	m_proj = driver->getTransform(ETS_PROJECTION);
+	m_inv = m_world;
 	m_inv.makeInverse();
-	m_trans = world.getTransposed();
-
-	m_worldviewproj = world * driver->getTransform(ETS_VIEW) * driver->getTransform(ETS_PROJECTION);
+	m_trans = m_world.getTransposed();
+	m_invtranspose = m_inv.getTransposed();
 }
 
 
 void irrExampleCB::OnSetConstants(IMaterialRendererServices* services, s32 userData)
 {
 	m_getMatrices();
-	auto id = services->getVertexShaderConstantID("mWorldViewProj");
-	services->setVertexShaderConstant(id, m_worldviewproj.pointer(), 16);
+	auto id = services->getVertexShaderConstantID("WORLD");
+	services->setVertexShaderConstant(id, m_world.pointer(), 16);
 
-	id = services->getVertexShaderConstantID("mTransWorld");
+	id = services->getVertexShaderConstantID("VIEW");
+	services->setVertexShaderConstant(id, m_view.pointer(), 16);
+
+	id = services->getVertexShaderConstantID("PROJ");
+	services->setVertexShaderConstant(id, m_proj.pointer(), 16);
+
+	id = services->getVertexShaderConstantID("TRANS");
 	services->setVertexShaderConstant(id, m_trans.pointer(), 16);
 
-	id = services->getVertexShaderConstantID("mInvWorld");
+	id = services->getVertexShaderConstantID("INV");
 	services->setVertexShaderConstant(id, m_inv.pointer(), 16);
 
-	id = services->getVertexShaderConstantID("mLightPos");
-	vector3df pos = device->getSceneManager()->getActiveCamera()->getPosition();
+	id = services->getVertexShaderConstantID("INV_TRANSPOSE");
+	services->setVertexShaderConstant(id, m_invtranspose.pointer(), 16);
+
+	SLight light;
+	if (driver->getDynamicLightCount() > 0) light = driver->getDynamicLight(0);
+	id = services->getVertexShaderConstantID("LIGHT_POS");
+	vector3df pos = light.Position;
 	services->setVertexShaderConstant(id, reinterpret_cast<f32*>(&pos), 3);
 
-	id = services->getVertexShaderConstantID("mLightColor");
-	SColorf color(0.f, 1.f, 1.f, 0.f);
+	id = services->getVertexShaderConstantID("LIGHT_COLOR");
+	SColorf color = device->getVideoDriver()->getDynamicLight(0).DiffuseColor;
 	services->setVertexShaderConstant(id, reinterpret_cast<f32*>(&color), 4);
+
+	id = services->getVertexShaderConstantID("CAMERA_VIEW");
+	vector3df camVec = device->getSceneManager()->getActiveCamera()->getAbsoluteTransformation().getRotationDegrees().rotationToDirection(vector3df(0, 0, 1));
+	services->setVertexShaderConstant(id, reinterpret_cast<f32*>(&camVec), 3);
 
 }

@@ -11,7 +11,10 @@ class irrExampleCB : public IShaderConstantSetCallBack
 	private:
 		void m_getMatrices();
 		IVideoDriver* driver;
-		matrix4 m_worldviewproj;
+		matrix4 m_world;
+		matrix4 m_view;
+		matrix4 m_proj;
+		matrix4 m_invtranspose;
 		matrix4 m_inv;
 		matrix4 m_trans;
 };

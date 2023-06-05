@@ -26,9 +26,9 @@ struct VertexOutput
     float3 Normal : TEXCOORD1;
     float3 Tangent : TEXCOORD2;
     float3 Binormal : TEXCOORD3;
-    
     float3 LightDirection : TEXCOORD4;
     float LightIntensity : TEXCOORD5;
+    
     float2 junk : TEXCOORD6; //utter junk, just threw this in to stop the compiler being mean to me :(
 };
 
@@ -45,7 +45,7 @@ VertexOutput vertexMain(VertexInput input)
     direction = normalize(direction);
     
     float intensity = dot(ret.Normal, direction);
-    ret.LightIntensity = intensity * 4;
+    ret.LightIntensity = intensity * 10;
     ret.LightDirection = direction;
     ret.TextureCoordinate = input.TextureCoordinate;
     
@@ -60,8 +60,8 @@ sampler2D bumpSampler : register(s1);
 
 float4 pixelMain(VertexOutput input) : COLOR0
 {
-    //.5 is the bump constant
-    float3 bump = .5 * (tex2D(bumpSampler, input.TextureCoordinate) - (.5, .5, .5));
+    //.15 is the bump constant
+    float3 bump = .15 * (tex2D(bumpSampler, input.TextureCoordinate) - (.5, .5, .5));
     float3 bumpNormal = input.Normal + (bump.x * input.Tangent + bump.y * input.Binormal);
     bumpNormal = normalize(bumpNormal);
     
@@ -74,11 +74,12 @@ float4 pixelMain(VertexOutput input) : COLOR0
     float3 v = normalize(mul(normalize(CAMERA_VIEW), WORLD));
     float dotRV = dot(r, v);
     
-    //200 here is how shiny it is and the 1 is how intense the spec highlight is
-    float4 spec = 1 * LIGHT_SPECULAR_COLOR * max(pow(dotRV, 200), 0) * input.LightIntensity;
+    //5 here is how shiny it is and the 1 is how intense the spec highlight is
+    float4 spec = 1 * LIGHT_SPECULAR_COLOR * max(pow(dotRV, 5), 0) * intensity;
+    
     float4 texColor = tex2D(textureSampler, input.TextureCoordinate);
     texColor.a = 1;
     
-    return saturate(texColor * (input.LightIntensity * LIGHT_DIFFUSE_COLOR) + spec + LIGHT_AMBIENT_COLOR);
+    return saturate(texColor * (intensity * LIGHT_DIFFUSE_COLOR) + spec + LIGHT_AMBIENT_COLOR);
 
 }

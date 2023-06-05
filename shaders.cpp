@@ -39,9 +39,18 @@ void irrExampleCB::OnSetConstants(IMaterialRendererServices* services, s32 userD
 	vector3df pos = light.Position;
 	services->setVertexShaderConstant(id, reinterpret_cast<f32*>(&pos), 3);
 
-	id = services->getVertexShaderConstantID("LIGHT_COLOR");
+	id = services->getPixelShaderConstantID("LIGHT_DIFFUSE_COLOR");
 	SColorf color = device->getVideoDriver()->getDynamicLight(0).DiffuseColor;
-	services->setVertexShaderConstant(id, reinterpret_cast<f32*>(&color), 4);
+	services->setPixelShaderConstant(id, reinterpret_cast<f32*>(&color), 4);
+
+	id = services->getPixelShaderConstantID("LIGHT_AMBIENT_COLOR");
+	color = device->getVideoDriver()->getDynamicLight(0).AmbientColor;
+	services->setPixelShaderConstant(id, reinterpret_cast<f32*>(&color), 4);
+	
+	id = services->getPixelShaderConstantID("LIGHT_SPECULAR_COLOR");
+	color = device->getVideoDriver()->getDynamicLight(0).SpecularColor;
+	services->setPixelShaderConstant(id, reinterpret_cast<f32*>(&color), 4);
+
 
 	id = services->getVertexShaderConstantID("CAMERA_VIEW");
 	vector3df camVec = device->getSceneManager()->getActiveCamera()->getAbsoluteTransformation().getRotationDegrees().rotationToDirection(vector3df(0, 0, 1));

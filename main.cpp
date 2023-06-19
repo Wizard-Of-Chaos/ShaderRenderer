@@ -4,6 +4,22 @@
 IrrlichtDevice* device = 0;
 ISceneManager* smgr = 0;
 IVideoDriver* driver = 0;
+BaedsLights* lmgr = 0;
+
+void setLight(SColorf col, vector3df rot, f32 speed)
+{
+	auto light = smgr->addLightSceneNode(0, vector3df(0,0,0), col);
+	SLight& data = light->getLightData();
+	data.AmbientColor.a = 0.f;
+	auto anim = smgr->createFlyCircleAnimator(vector3df(0, 0, 0), 150.f, speed, rot);
+	light->addAnimator(anim);
+	anim->drop();
+
+	auto bill = smgr->addBillboardSceneNode(light, dimension2df(20.f, 20.f));
+	bill->setMaterialTexture(0, driver->getTexture("media/particlewhite.bmp"));
+	bill->setMaterialFlag(EMF_LIGHTING, false);
+	bill->setMaterialType(EMT_TRANSPARENT_ADD_COLOR);
+}
 
 int main()
 {
@@ -15,7 +31,10 @@ int main()
 	path shader = "shaders/";
 
 	auto gpu = driver->getGPUProgrammingServices();
-	auto cb = new irrExampleCB(driver);
+	auto cb = new basicNormalsCb();
+
+	lmgr = new BaedsLights();
+	smgr->setLightManager(lmgr);
 
 	s32 shaderMaterial = 0;
 
@@ -66,12 +85,13 @@ int main()
 
 	if (useShader) {
 		shaderMaterial = gpu->addHighLevelShaderMaterialFromFiles(
-			vertexFile, "vertexMain", EVST_VS_2_0,
-			pixelFile, "pixelMain", EPST_PS_2_0,
+			vertexFile, "vertexMain", EVST_VS_3_0,
+			pixelFile, "pixelMain", EPST_PS_3_0,
 			cb, baseType, 0);
 	}
 	auto initmesh = smgr->getMesh("media/tux_final/tuxBACK.obj");
 	auto mesh = smgr->getMeshManipulator()->createMeshWithTangents(initmesh);
+	smgr->getMeshCache()->removeMesh(initmesh);
 
 	auto node = smgr->addMeshSceneNode(mesh);
 	node->getMaterial(0).setTexture(0, driver->getTexture("media/tux_final/tuxBACK_Material_BaseColor.jpg"));
@@ -98,16 +118,14 @@ int main()
 	anim->drop();
 	
 	if (isLight) {
-		auto light = smgr->addLightSceneNode();
-		anim = smgr->createFlyCircleAnimator(vector3df(0, 0, 0), 150.f, .0004f);
-		light->addAnimator(anim);
-		anim->drop();
-
-		auto bill = smgr->addBillboardSceneNode(light, dimension2df(20.f, 20.f));
-		bill->setMaterialTexture(0, driver->getTexture(media + "particlewhite.bmp"));
-		bill->setMaterialFlag(EMF_LIGHTING, false);
-		bill->setMaterialType(EMT_TRANSPARENT_ADD_COLOR);
-		node->setMaterialFlag(EMF_LIGHTING, true);
+		setLight(SColorf(1, 1, 1), vector3df(0, 1, 0), .001f);
+		setLight(SColorf(1, 0, 0), vector3df(1, 0, 0), .0004f);
+		setLight(SColorf(0, 1, 0), vector3df(0, 0, 1), .0015f);
+		setLight(SColorf(0, 0, 1), vector3df(1, 0, 1), .002f);
+		setLight(SColorf(1, 0, 1), vector3df(1, 1, 0), .005f);
+		setLight(SColorf(.5, .5, 1), vector3df(1, 0.5, 0), .0025f);
+		setLight(SColorf(0, .5, .2), vector3df(1, 1, 1), .0001f);
+		setLight(SColorf(.3, .1, .7), vector3df(0, 1, 1), .0008f);
 	}
 	else {
 		node->setMaterialFlag(EMF_LIGHTING, false);

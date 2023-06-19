@@ -12,6 +12,8 @@ using namespace io;
 using namespace gui;
 
 extern IrrlichtDevice* device;
+class BaedsLights;
+extern BaedsLights* lmgr;
 
 #ifdef _MSC_VER
 #pragma comment(lib, "Irrlicht.lib")

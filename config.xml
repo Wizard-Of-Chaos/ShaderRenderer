@@ -1,3 +1,3 @@
 <?xml version="1.0"?>
-<shader vertex="default.hlsl" pixel="default.hlsl" basemat="solid"/>
+<shader vertex="basic_normals.hlsl" pixel="basic_normals.hlsl" basemat="solid"/>
 <toggles light="yes" shader="yes"/>

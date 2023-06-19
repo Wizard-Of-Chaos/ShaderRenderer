@@ -47,7 +47,6 @@ VertexOutput vertexMain(VertexInput input)
     float intensity = dot(ret.Normal, direction);
     ret.LightIntensity = intensity * 10;
     ret.LightDirection = direction;
-    ret.TextureCoordinate = input.TextureCoordinate;
     
     //junk to make the compiler not optimize it away
     ret.junk = mul(CAMERA_VIEW, mul(TRANS, INV));

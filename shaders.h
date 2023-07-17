@@ -40,7 +40,8 @@ class basicNormalsCb : public IShaderConstantSetCallBack
 		matrix4 m_proj;
 		matrix4 m_invtranspose;
 
-		matrix4 lights[5];
+		matrix4 lights[8];
+		vector3df radcones[8];
 };
 
 #endif

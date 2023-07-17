@@ -81,8 +81,17 @@ void basicNormalsCb::OnSetConstants(IMaterialRendererServices* services, s32 use
 	id = services->getVertexShaderConstantID("INV_TRANSPOSE");
 	services->setVertexShaderConstant(id, m_invtranspose.pointer(), 16);
 	id = services->getPixelShaderConstantID("CAMERA_VIEW");
-	vector3df camVec = device->getSceneManager()->getActiveCamera()->getAbsoluteTransformation().getRotationDegrees().rotationToDirection(vector3df(0, 0, 1));
+	auto cam = device->getSceneManager()->getActiveCamera();
+	vector3df camPos = cam->getAbsolutePosition();
+	vector3df camVec = cam->getAbsoluteTransformation().getRotationDegrees().rotationToDirection(vector3df(0, 0, 1));
+	f32 dist = cam->getFarValue();
 	services->setPixelShaderConstant(id, reinterpret_cast<f32*>(&camVec), 3);
+	
+	id = services->getVertexShaderConstantID("CAMERA_POS");
+	services->setVertexShaderConstant(id, reinterpret_cast<f32*>(&camPos), 16);
+	id = services->getVertexShaderConstantID("RENDER_DISTANCE");
+	services->setVertexShaderConstant(id, &dist, 1);
+
 
 	auto driver = device->getVideoDriver();
 	vector3df nodepos(0, 0, 0);
@@ -91,14 +100,19 @@ void basicNormalsCb::OnSetConstants(IMaterialRendererServices* services, s32 use
 
 	for (u32 i = 0; i < 8; ++i) {
 		matrix4& binder = lights[i];
+		vector3df& radcone = radcones[i];
 		if (i <= lightCount) {
 			const SLight& light = driver->getDynamicLight(i);
-			vector3df direction;
+			vector3df direction = (light.Position - nodepos);
+			f32 dist = direction.getLength();
+			binder[3] = dist;
+
 			if (light.Type == ELT_POINT) {
-				direction = (light.Position - nodepos).normalize();
+				direction = direction.normalize();
 			}
 			else {
 				direction = light.Direction;
+				binder[3] = 1;
 			}
 			binder[0] = direction.X;
 			binder[1] = direction.Y;
@@ -122,12 +136,19 @@ void basicNormalsCb::OnSetConstants(IMaterialRendererServices* services, s32 use
 			binder[13] = spec.g;
 			binder[14] = spec.b;
 			binder[15] = spec.a;
+
+			radcone.X = light.Radius;
+			radcone.Y = light.InnerCone;
+			radcone.Z = light.OuterCone;
 		}
 		else {
-			binder[3] = 2;
+			binder[3] = -1;
 		}
 		std::string which = "LIGHTINFO_" + std::to_string(i);
 		s32 matId = services->getPixelShaderConstantID(which.c_str());
 		services->setPixelShaderConstant(matId, binder.pointer(), 16);
+		which = "LIGHTRADCONE_" + std::to_string(i);
+		matId = services->getPixelShaderConstantID(which.c_str());
+		services->setPixelShaderConstant(matId, reinterpret_cast<f32*>(&radcone), 3);
 	}
 }

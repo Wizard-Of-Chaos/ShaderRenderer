@@ -32,8 +32,11 @@ class basicNormalsCb : public IShaderConstantSetCallBack
 {
 	public:
 		virtual void OnSetConstants(IMaterialRendererServices* services, s32 userData);
+		virtual void OnSetMaterial(const SMaterial& material) { m_material = &material; }
 	private:
 		void m_getMatrices();
+
+		const video::SMaterial* m_material;
 
 		matrix4 m_world;
 		matrix4 m_view;

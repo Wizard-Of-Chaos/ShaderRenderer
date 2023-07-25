@@ -104,6 +104,8 @@ int main()
 
 	if (useShader) node->setMaterialType((E_MATERIAL_TYPE)shaderMaterial);
 	else node->setMaterialType(baseType);
+	node->setMaterialFlag(EMF_FOG_ENABLE, true);
+	driver->setFog(SColor(0, 100, 200, 50), EFT_FOG_LINEAR, 250, 500);
 
 	node->setPosition(vector3df(0, 0, 0));
 	node->setScale(vector3df(15, 15, 15));
@@ -120,6 +122,7 @@ int main()
 	
 	if (isLight) {
 		setLight(SColorf(1, 1, 1), vector3df(0, 1, 0), .001f);
+		/*
 		setLight(SColorf(1, 0, 0), vector3df(1, 0, 0), .0004f);
 		setLight(SColorf(0, 1, 0), vector3df(0, 0, 1), .0015f);
 		setLight(SColorf(0, 0, 1), vector3df(1, 0, 1), .002f);
@@ -127,6 +130,7 @@ int main()
 		setLight(SColorf(.5, .5, 1), vector3df(1, 0.5, 0), .0025f);
 		setLight(SColorf(0, .5, .2), vector3df(1, 1, 1), .0001f);
 		setLight(SColorf(.3, .1, .7), vector3df(0, 1, 1), .0008f);
+		*/
 	}
 	else {
 		node->setMaterialFlag(EMF_LIGHTING, false);

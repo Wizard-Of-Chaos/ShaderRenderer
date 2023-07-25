@@ -2,6 +2,7 @@ float4x4 WORLD; //world transform
 float4x4 VIEW; //view transform
 float4x4 PROJ; //projection transform
 float4x4 INV_TRANSPOSE; //world inverse, transposed
+
 float3 CAMERA_VIEW; //camera view vector
 float3 CAMERA_POS;
 float RENDER_DISTANCE;
@@ -23,6 +24,10 @@ float3 LIGHTRADCONE_6;
 float4x4 LIGHTINFO_7;
 float3 LIGHTRADCONE_7;
 
+bool HAS_FOG;
+float4 FOG_COLOR;
+float FOG_MIN;
+float FOG_MAX;
 
 struct VertexInput
 {
@@ -128,6 +133,18 @@ float4 getLightSpecForPixel(float4x4 light, float2 texCoord, float3 normal, floa
     //5 here is how shiny it is and the 1 is how intense the spec highlight is
     float4 specColor = 1 * getLightSpec(light) * max(pow(dotRV, 5), 0) * intensity;
     return specColor;
+}
+
+float getFogIntensity(float3 pos)
+{
+    float dist = length(pos - CAMERA_POS);
+    if (dist <= FOG_MIN)
+        return 0;
+    if (dist >= FOG_MAX)
+        return 1;
+
+    float ratio = FOG_MAX - dist / (FOG_MAX - FOG_MIN);
+    return ratio;
 }
 
 
@@ -236,7 +253,20 @@ float4 pixelMain(VertexOutput input) : COLOR0
         amb = getLightAmbient(LIGHTINFO_7);
         lightcolor = saturate(lightcolor + diffuse + spec + amb);
     }
-    return saturate(texColor * lightcolor);
+    float4 finalColor = saturate(texColor * lightcolor);
+    
+    if (HAS_FOG)
+    {
+        float fogVal = getFogIntensity(input.vertPosition);
+        if (fogVal == 1)
+            return FOG_COLOR;
+        else if (fogVal == 0)
+            return finalColor;
+        
+        return lerp(finalColor, FOG_COLOR, fogVal);
+
+    }
+    return finalColor;
     
 
 }

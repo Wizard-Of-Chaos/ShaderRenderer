@@ -151,4 +151,22 @@ void basicNormalsCb::OnSetConstants(IMaterialRendererServices* services, s32 use
 		matId = services->getPixelShaderConstantID(which.c_str());
 		services->setPixelShaderConstant(matId, reinterpret_cast<f32*>(&radcone), 3);
 	}
+	
+	id = services->getPixelShaderConstantID("HAS_FOG");
+	int isFog = m_material->FogEnable;
+	services->setPixelShaderConstant(id, &isFog, 1);
+	if (m_material->FogEnable) {
+		SColor col;
+		f32 min, max, density;
+		bool range, pix;
+		E_FOG_TYPE type;
+		driver->getFog(col, type, min, max, density, pix, range);
+		SColorf colf(col);
+		id = services->getPixelShaderConstantID("FOG_COLOR");
+		services->setPixelShaderConstant(id, reinterpret_cast<f32*>(&colf), 4);
+		id = services->getPixelShaderConstantID("FOG_MIN");
+		services->setPixelShaderConstant(id, &min, 4);
+		id = services->getPixelShaderConstantID("FOG_MAX");
+		services->setPixelShaderConstant(id, &max, 4);
+	}
 }

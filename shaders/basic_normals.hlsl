@@ -135,19 +135,6 @@ float4 getLightSpecForPixel(float4x4 light, float2 texCoord, float3 normal, floa
     return specColor;
 }
 
-float getFogIntensity(float3 pos)
-{
-    float dist = length(pos - CAMERA_POS);
-    if (dist <= FOG_MIN)
-        return 0;
-    if (dist >= FOG_MAX)
-        return 1;
-
-    float ratio = FOG_MAX - dist / (FOG_MAX - FOG_MIN);
-    return ratio;
-}
-
-
 float4 pixelMain(VertexOutput input) : COLOR0
 {
 
@@ -257,13 +244,14 @@ float4 pixelMain(VertexOutput input) : COLOR0
     
     if (HAS_FOG)
     {
-        float fogVal = getFogIntensity(input.vertPosition);
-        if (fogVal == 1)
+        float dist = distance(input.vertPosition, CAMERA_POS);
+        if (dist > FOG_MAX)
             return FOG_COLOR;
-        else if (fogVal == 0)
+        if (dist < FOG_MIN)
             return finalColor;
         
-        return lerp(finalColor, FOG_COLOR, fogVal);
+        float ratio = (dist - FOG_MIN) / (FOG_MAX - FOG_MIN);
+        return lerp(finalColor, FOG_COLOR, ratio);
 
     }
     return finalColor;

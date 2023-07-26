@@ -7,22 +7,69 @@ float3 CAMERA_VIEW; //camera view vector
 float3 CAMERA_POS;
 float RENDER_DISTANCE;
 
-float4x4 LIGHTINFO_0;
+bool LIGHTVALID_0;
 float3 LIGHTRADCONE_0;
-float4x4 LIGHTINFO_1;
+float3 LIGHTDIR_0;
+float3 LIGHTPOS_0;
+float4 LIGHTDIFF_0;
+float4 LIGHTAMB_0;
+float4 LIGHTSPEC_0;
+
+bool LIGHTVALID_1;
 float3 LIGHTRADCONE_1;
-float4x4 LIGHTINFO_2;
+float3 LIGHTDIR_1;
+float3 LIGHTPOS_1;
+float4 LIGHTDIFF_1;
+float4 LIGHTAMB_1;
+float4 LIGHTSPEC_1;
+
+bool LIGHTVALID_2;
 float3 LIGHTRADCONE_2;
-float4x4 LIGHTINFO_3;
+float3 LIGHTDIR_2;
+float3 LIGHTPOS_2;
+float4 LIGHTDIFF_2;
+float4 LIGHTAMB_2;
+float4 LIGHTSPEC_2;
+
+bool LIGHTVALID_3;
 float3 LIGHTRADCONE_3;
-float4x4 LIGHTINFO_4;
+float3 LIGHTDIR_3;
+float3 LIGHTPOS_3;
+float4 LIGHTDIFF_3;
+float4 LIGHTAMB_3;
+float4 LIGHTSPEC_3;
+
+bool LIGHTVALID_4;
 float3 LIGHTRADCONE_4;
-float4x4 LIGHTINFO_5;
+float3 LIGHTDIR_4;
+float3 LIGHTPOS_4;
+float4 LIGHTDIFF_4;
+float4 LIGHTAMB_4;
+float4 LIGHTSPEC_4;
+
+bool LIGHTVALID_5;
 float3 LIGHTRADCONE_5;
-float4x4 LIGHTINFO_6;
+float3 LIGHTDIR_5;
+float3 LIGHTPOS_5;
+float4 LIGHTDIFF_5;
+float4 LIGHTAMB_5;
+float4 LIGHTSPEC_5;
+
+bool LIGHTVALID_6;
 float3 LIGHTRADCONE_6;
-float4x4 LIGHTINFO_7;
+float3 LIGHTDIR_6;
+float3 LIGHTPOS_6;
+float4 LIGHTDIFF_6;
+float4 LIGHTAMB_6;
+float4 LIGHTSPEC_6;
+
+bool LIGHTVALID_7;
 float3 LIGHTRADCONE_7;
+float3 LIGHTDIR_7;
+float3 LIGHTPOS_7;
+float4 LIGHTDIFF_7;
+float4 LIGHTAMB_7;
+float4 LIGHTSPEC_7;
 
 bool HAS_FOG;
 float4 FOG_COLOR;
@@ -48,6 +95,7 @@ struct VertexOutput
     float3 Binormal : TEXCOORD3;
     float4 Color : COLOR0;
     float3 vertPosition : TEXCOORD4; //used to sneak info into the pixel shader
+    float3 viewPosition : TEXCOORD5;
 };
 
 VertexOutput vertexMain(VertexInput input)
@@ -68,7 +116,8 @@ VertexOutput vertexMain(VertexInput input)
     ret.Tangent = normalize(mul(input.Tangent, INV_TRANSPOSE));
     ret.Binormal = normalize(mul(input.Binormal, INV_TRANSPOSE));
     ret.TextureCoordinate = input.TextureCoordinate;
-    ret.vertPosition = ret.Position;
+    ret.vertPosition = mul(input.Position, WORLD);
+    ret.viewPosition = ret.Position;
     
     return ret;
 }
@@ -95,18 +144,6 @@ float3 getLightDirection(float4x4 info)
 {
     return normalize(float3(info[0].x, info[0].y, info[0].z));
 }
-float4 getLightDiffuse(float4x4 info)
-{
-    return info[1];
-}
-float4 getLightAmbient(float4x4 info)
-{
-    return info[2];
-}
-float4 getLightSpec(float4x4 info)
-{
-    return info[3];
-}
 
 float BUMP_CONST = .15;
 
@@ -118,21 +155,28 @@ float3 getBumpNormal(float3 normal, float2 texCoord, float3 tangent, float3 bino
 }
 
 //note: just the light color
-float4 getLightSpecForPixel(float4x4 light, float2 texCoord, float3 normal, float3 tangent, float3 binormal, float intensity)
+float4 getLightSpecForPixel(float4 lightSpecColor, float3 direction, float2 texCoord, float3 normal, float3 tangent, float3 binormal, float intensity)
 {
-    if (light[0].w == -1)
-    { //is this a bogus light?
-        return float4(0, 0, 0, 0);
-    }
-    float3 dir = normalize(getLightDirection(light));
+    float3 dir = normalize(direction);
     float3 bumpNormal = getBumpNormal(normal, texCoord, tangent, binormal);
     float3 r = normalize(2 * dot(dir, bumpNormal) * bumpNormal - dir);
     float3 v = normalize(mul(normalize(CAMERA_VIEW), WORLD));
     float dotRV = dot(r, v);
     
     //5 here is how shiny it is and the 1 is how intense the spec highlight is
-    float4 specColor = 1 * getLightSpec(light) * max(pow(dotRV, 5), 0) * intensity;
+    float4 specColor = 1 * lightSpecColor * max(pow(dotRV, 5), 0) * intensity;
     return specColor;
+}
+
+float4 getLightColor(VertexOutput input, float3 bumpNormal, float4 initColor, float radius, float3 position, float3 direction, float4 diff, float4 amb, float4 specular)
+{
+    float intensity = dot(direction, bumpNormal) * getDistanceIntensity(radius, distance(position, input.vertPosition));
+    if (intensity < 0)
+        intensity = 0;
+        
+    float4 diffuse = intensity * diff;
+    float4 spec = getLightSpecForPixel(specular, direction, input.TextureCoordinate, input.Normal, input.Tangent, input.Binormal, intensity);
+    return saturate(initColor + diffuse + spec + amb);
 }
 
 float4 pixelMain(VertexOutput input) : COLOR0
@@ -152,99 +196,44 @@ float4 pixelMain(VertexOutput input) : COLOR0
     float3 bumpNormal = input.Normal + (bump.x * input.Tangent + bump.y * input.Binormal);
     bumpNormal = normalize(bumpNormal);
     
-    if (LIGHTINFO_0[0].w >= 0)
+    if (LIGHTVALID_0)
     {
-        float intensity = dot(getLightDirection(LIGHTINFO_0), bumpNormal) * getDistanceIntensity(LIGHTRADCONE_0.x, LIGHTINFO_0[0].w);
-        if (intensity < 0)
-            intensity = 0;
-        
-        diffuse = intensity * getLightDiffuse(LIGHTINFO_0);
-        spec = getLightSpecForPixel(LIGHTINFO_0, input.TextureCoordinate, input.Normal, input.Tangent, input.Binormal, intensity);
-        amb = getLightAmbient(LIGHTINFO_0);
-        lightcolor = saturate(lightcolor + diffuse + spec + amb);
+        lightcolor = getLightColor(input, bumpNormal, lightcolor, LIGHTRADCONE_0.x, LIGHTPOS_0, LIGHTDIR_0, LIGHTDIFF_0, LIGHTAMB_0, LIGHTSPEC_0);
     }
-    if (LIGHTINFO_1[0].w >= 0)
+    if (LIGHTVALID_1)
     {
-        float intensity = dot(getLightDirection(LIGHTINFO_1), bumpNormal) * getDistanceIntensity(LIGHTRADCONE_1.x, LIGHTINFO_1[0].w);
-        if (intensity < 0)
-            intensity = 0;
-        
-        diffuse = intensity * getLightDiffuse(LIGHTINFO_1);
-        spec = getLightSpecForPixel(LIGHTINFO_1, input.TextureCoordinate, input.Normal, input.Tangent, input.Binormal, intensity);
-        amb = getLightAmbient(LIGHTINFO_1);
-        lightcolor = saturate(lightcolor + diffuse + spec + amb);
+        lightcolor = getLightColor(input, bumpNormal, lightcolor, LIGHTRADCONE_1.x, LIGHTPOS_1, LIGHTDIR_1, LIGHTDIFF_1, LIGHTAMB_1, LIGHTSPEC_1);
     }
-    if (LIGHTINFO_2[0].w >= 0)
+    if (LIGHTVALID_2)
     {
-        float intensity = dot(getLightDirection(LIGHTINFO_2), bumpNormal) * getDistanceIntensity(LIGHTRADCONE_2.x, LIGHTINFO_2[0].w);
-        if (intensity < 0)
-            intensity = 0;
-        
-        diffuse = intensity * getLightDiffuse(LIGHTINFO_2);
-        spec = getLightSpecForPixel(LIGHTINFO_2, input.TextureCoordinate, input.Normal, input.Tangent, input.Binormal, intensity);
-        amb = getLightAmbient(LIGHTINFO_2);
-        lightcolor = saturate(lightcolor + diffuse + spec + amb);
+        lightcolor = getLightColor(input, bumpNormal, lightcolor, LIGHTRADCONE_2.x, LIGHTPOS_2, LIGHTDIR_2, LIGHTDIFF_2, LIGHTAMB_2, LIGHTSPEC_2);
     }
-    if (LIGHTINFO_3[0].w >= 0)
+    if (LIGHTVALID_3)
     {
-        float intensity = dot(getLightDirection(LIGHTINFO_3), bumpNormal) * getDistanceIntensity(LIGHTRADCONE_3.x, LIGHTINFO_3[0].w);
-        if (intensity < 0)
-            intensity = 0;
-        
-        diffuse = intensity * getLightDiffuse(LIGHTINFO_3);
-        spec = getLightSpecForPixel(LIGHTINFO_3, input.TextureCoordinate, input.Normal, input.Tangent, input.Binormal, intensity);
-        amb = getLightAmbient(LIGHTINFO_3);
-        lightcolor = saturate(lightcolor + diffuse + spec + amb);
+        lightcolor = getLightColor(input, bumpNormal, lightcolor, LIGHTRADCONE_3.x, LIGHTPOS_3, LIGHTDIR_3, LIGHTDIFF_3, LIGHTAMB_3, LIGHTSPEC_3);
     }
-    if (LIGHTINFO_4[0].w >= 0)
+    if (LIGHTVALID_4)
     {
-        float intensity = dot(getLightDirection(LIGHTINFO_4), bumpNormal) * getDistanceIntensity(LIGHTRADCONE_4.x, LIGHTINFO_4[0].w);
-        if (intensity < 0)
-            intensity = 0;
-        
-        diffuse = intensity * getLightDiffuse(LIGHTINFO_4);
-        spec = getLightSpecForPixel(LIGHTINFO_4, input.TextureCoordinate, input.Normal, input.Tangent, input.Binormal, intensity);
-        amb = getLightAmbient(LIGHTINFO_4);
-        lightcolor = saturate(lightcolor + diffuse + spec + amb);
+        lightcolor = getLightColor(input, bumpNormal, lightcolor, LIGHTRADCONE_4.x, LIGHTPOS_4, LIGHTDIR_4, LIGHTDIFF_4, LIGHTAMB_4, LIGHTSPEC_4);
     }
-    if (LIGHTINFO_5[0].w >= 0)
+    if (LIGHTVALID_5)
     {
-        float intensity = dot(getLightDirection(LIGHTINFO_5), bumpNormal) * getDistanceIntensity(LIGHTRADCONE_5.x, LIGHTINFO_5[0].w);
-        if (intensity < 0)
-            intensity = 0;
-        
-        diffuse = intensity * getLightDiffuse(LIGHTINFO_5);
-        spec = getLightSpecForPixel(LIGHTINFO_5, input.TextureCoordinate, input.Normal, input.Tangent, input.Binormal, intensity);
-        amb = getLightAmbient(LIGHTINFO_5);
-        lightcolor = saturate(lightcolor + diffuse + spec + amb);
+        lightcolor = getLightColor(input, bumpNormal, lightcolor, LIGHTRADCONE_5.x, LIGHTPOS_5, LIGHTDIR_5, LIGHTDIFF_5, LIGHTAMB_5, LIGHTSPEC_5);
     }
-    if (LIGHTINFO_6[0].w >= 0)
+    if (LIGHTVALID_6)
     {
-        float intensity = dot(getLightDirection(LIGHTINFO_6), bumpNormal) * getDistanceIntensity(LIGHTRADCONE_6.x, LIGHTINFO_6[0].w);
-        if (intensity < 0)
-            intensity = 0;
-        
-        diffuse = intensity * getLightDiffuse(LIGHTINFO_6);
-        spec = getLightSpecForPixel(LIGHTINFO_6, input.TextureCoordinate, input.Normal, input.Tangent, input.Binormal, intensity);
-        amb = getLightAmbient(LIGHTINFO_6);
-        lightcolor = saturate(lightcolor + diffuse + spec + amb);
+        lightcolor = getLightColor(input, bumpNormal, lightcolor, LIGHTRADCONE_6.x, LIGHTPOS_6, LIGHTDIR_6, LIGHTDIFF_6, LIGHTAMB_6, LIGHTSPEC_6);
     }
-    if (LIGHTINFO_7[0].w >= 0)
+    if (LIGHTVALID_7)
     {
-        float intensity = dot(getLightDirection(LIGHTINFO_7), bumpNormal) * getDistanceIntensity(LIGHTRADCONE_7.x, LIGHTINFO_7[0].w);
-        if (intensity < 0)
-            intensity = 0;
-        
-        diffuse = intensity * getLightDiffuse(LIGHTINFO_7);
-        spec = getLightSpecForPixel(LIGHTINFO_7, input.TextureCoordinate, input.Normal, input.Tangent, input.Binormal, intensity);
-        amb = getLightAmbient(LIGHTINFO_7);
-        lightcolor = saturate(lightcolor + diffuse + spec + amb);
+        lightcolor = getLightColor(input, bumpNormal, lightcolor, LIGHTRADCONE_7.x, LIGHTPOS_7, LIGHTDIR_7, LIGHTDIFF_7, LIGHTAMB_7, LIGHTSPEC_7);
+
     }
     float4 finalColor = saturate(texColor * lightcolor);
     
     if (HAS_FOG)
     {
-        float dist = distance(input.vertPosition, CAMERA_POS);
+        float dist = distance(input.viewPosition, CAMERA_POS);
         if (dist > FOG_MAX)
             return FOG_COLOR;
         if (dist < FOG_MIN)

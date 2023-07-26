@@ -1,5 +1,6 @@
 #include "shaders.h"
 #include <string>
+#include <iostream>
 
 void irrExampleCB::m_getMatrices()
 {
@@ -85,6 +86,7 @@ void basicNormalsCb::OnSetConstants(IMaterialRendererServices* services, s32 use
 	vector3df camPos = cam->getAbsolutePosition();
 	vector3df camVec = cam->getAbsoluteTransformation().getRotationDegrees().rotationToDirection(vector3df(0, 0, 1));
 	f32 dist = cam->getFarValue();
+
 	services->setPixelShaderConstant(id, reinterpret_cast<f32*>(&camVec), 3);
 	
 	id = services->getVertexShaderConstantID("CAMERA_POS");
@@ -101,55 +103,58 @@ void basicNormalsCb::OnSetConstants(IMaterialRendererServices* services, s32 use
 	for (u32 i = 0; i < 8; ++i) {
 		matrix4& binder = lights[i];
 		vector3df& radcone = radcones[i];
-		if (i <= lightCount) {
+		vector3df direction(0, 0, 0);
+		vector3df position(0, 0, 0);
+		SColorf diff, amb, spec;
+		bool valid = false;
+		if (i < lightCount) {
+			valid = true;
 			const SLight& light = driver->getDynamicLight(i);
-			vector3df direction = (light.Position - nodepos);
-			f32 dist = direction.getLength();
-			binder[3] = dist;
 
 			if (light.Type == ELT_POINT) {
+				direction = (light.Position - nodepos);
 				direction = direction.normalize();
 			}
 			else {
 				direction = light.Direction;
 				binder[3] = 1;
 			}
-			binder[0] = direction.X;
-			binder[1] = direction.Y;
-			binder[2] = direction.Z;
+			position = light.Position;
 
-			SColorf dif = light.DiffuseColor;
-			SColorf amb = light.AmbientColor;
-			SColorf spec = light.SpecularColor;
-
-			binder[4] = dif.r;
-			binder[5] = dif.g;
-			binder[6] = dif.b;
-			binder[7] = dif.a;
-
-			binder[8] = amb.r;
-			binder[9] = amb.g;
-			binder[10] = amb.b;
-			binder[11] = amb.a;
-
-			binder[12] = spec.r;
-			binder[13] = spec.g;
-			binder[14] = spec.b;
-			binder[15] = spec.a;
+			diff = light.DiffuseColor;
+			amb = light.AmbientColor;
+			spec = light.SpecularColor;
 
 			radcone.X = light.Radius;
 			radcone.Y = light.InnerCone;
 			radcone.Z = light.OuterCone;
 		}
 		else {
-			binder[3] = -1;
+			valid = false;
 		}
-		std::string which = "LIGHTINFO_" + std::to_string(i);
+		int cast = valid;
+		std::string which = "LIGHTVALID_" + std::to_string(i);
 		s32 matId = services->getPixelShaderConstantID(which.c_str());
-		services->setPixelShaderConstant(matId, binder.pointer(), 16);
+		services->setPixelShaderConstant(matId, &cast, 1);
 		which = "LIGHTRADCONE_" + std::to_string(i);
 		matId = services->getPixelShaderConstantID(which.c_str());
 		services->setPixelShaderConstant(matId, reinterpret_cast<f32*>(&radcone), 3);
+		which = "LIGHTDIR_" + std::to_string(i);
+		matId = services->getPixelShaderConstantID(which.c_str());
+		services->setPixelShaderConstant(matId, reinterpret_cast<f32*>(&direction), 3);
+		which = "LIGHTPOS_" + std::to_string(i);
+		matId = services->getPixelShaderConstantID(which.c_str());
+		services->setPixelShaderConstant(matId, reinterpret_cast<f32*>(&position), 3);
+		which = "LIGHTDIFF_" + std::to_string(i);
+		matId = services->getPixelShaderConstantID(which.c_str());
+		services->setPixelShaderConstant(matId, reinterpret_cast<f32*>(&diff), 4);
+		which = "LIGHTAMB_" + std::to_string(i);
+		matId = services->getPixelShaderConstantID(which.c_str());
+		services->setPixelShaderConstant(matId, reinterpret_cast<f32*>(&amb), 4);
+		which = "LIGHTSPEC_" + std::to_string(i);
+		matId = services->getPixelShaderConstantID(which.c_str());
+		services->setPixelShaderConstant(matId, reinterpret_cast<f32*>(&spec), 4);
+
 	}
 	
 	id = services->getPixelShaderConstantID("HAS_FOG");

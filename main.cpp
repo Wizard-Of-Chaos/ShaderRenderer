@@ -12,7 +12,7 @@ void setLight(SColorf col, vector3df rot, f32 speed)
 	SLight& data = light->getLightData();
 	data.Radius = 155.f;
 	data.AmbientColor.a = 0.f;
-	auto anim = smgr->createFlyCircleAnimator(vector3df(0, 0, 0), 150.f, speed, rot);
+	auto anim = smgr->createFlyCircleAnimator(vector3df(0, 0, 0), 200.f, speed, rot);
 	light->addAnimator(anim);
 	anim->drop();
 
@@ -78,8 +78,8 @@ int main()
 
 	delete xml;
 
-	if(!isLight) device->getLogger()->log(L"Light is OFF");
-	if(!useShader) device->getLogger()->log(L"Shader is OFF -- what? Why?");
+	if (!isLight) device->getLogger()->log(L"Light is OFF");
+	if (!useShader) device->getLogger()->log(L"Shader is OFF -- what? Why?");
 
 	path vertexFile = shader + vertex;
 	path pixelFile = shader + pixel;
@@ -114,15 +114,20 @@ int main()
 		L"Normal maps included, even if not used.",
 		video::SColor(255, 255, 255, 255), node);
 
-	
+
 	ISceneNodeAnimator* anim = smgr->createRotationAnimator(
 		vector3df(0, 0, 0.2f));
 	node->addAnimator(anim);
 	anim->drop();
+	anim = smgr->createFlyStraightAnimator(
+		vector3df(0, 0, 400), vector3df(0, 0, -400), 10000, true, true);
+	node->addAnimator(anim);
+	anim->drop();
+
 	
 	if (isLight) {
 		setLight(SColorf(1, 1, 1), vector3df(0, 1, 0), .001f);
-		/*
+		///*
 		setLight(SColorf(1, 0, 0), vector3df(1, 0, 0), .0004f);
 		setLight(SColorf(0, 1, 0), vector3df(0, 0, 1), .0015f);
 		setLight(SColorf(0, 0, 1), vector3df(1, 0, 1), .002f);
@@ -130,7 +135,7 @@ int main()
 		setLight(SColorf(.5, .5, 1), vector3df(1, 0.5, 0), .0025f);
 		setLight(SColorf(0, .5, .2), vector3df(1, 1, 1), .0001f);
 		setLight(SColorf(.3, .1, .7), vector3df(0, 1, 1), .0008f);
-		*/
+		//*/
 	}
 	else {
 		node->setMaterialFlag(EMF_LIGHTING, false);

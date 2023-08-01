@@ -101,8 +101,7 @@ void basicNormalsCb::OnSetConstants(IMaterialRendererServices* services, s32 use
 	s32 lightCount = driver->getDynamicLightCount();
 
 	for (u32 i = 0; i < 8; ++i) {
-		matrix4& binder = lights[i];
-		vector3df& radcone = radcones[i];
+		vector3df radcone(0, 0, 0);
 		vector3df direction(0, 0, 0);
 		vector3df position(0, 0, 0);
 		SColorf diff, amb, spec;
@@ -117,7 +116,6 @@ void basicNormalsCb::OnSetConstants(IMaterialRendererServices* services, s32 use
 			}
 			else {
 				direction = light.Direction;
-				binder[3] = 1;
 			}
 			position = light.Position;
 

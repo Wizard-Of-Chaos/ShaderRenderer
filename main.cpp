@@ -10,7 +10,7 @@ void setLight(SColorf col, vector3df rot, f32 speed)
 {
 	auto light = smgr->addLightSceneNode(0, vector3df(0,0,0), col);
 	SLight& data = light->getLightData();
-	data.Radius = 155.f;
+	data.Radius = 210.f;
 	data.AmbientColor.a = 0.f;
 	auto anim = smgr->createFlyCircleAnimator(vector3df(0, 0, 0), 200.f, speed, rot);
 	light->addAnimator(anim);
@@ -119,11 +119,12 @@ int main()
 		vector3df(0, 0, 0.2f));
 	node->addAnimator(anim);
 	anim->drop();
+	/*
 	anim = smgr->createFlyStraightAnimator(
 		vector3df(0, 0, 400), vector3df(0, 0, -400), 10000, true, true);
 	node->addAnimator(anim);
 	anim->drop();
-
+	//*/
 	
 	if (isLight) {
 		setLight(SColorf(1, 1, 1), vector3df(0, 1, 0), .001f);

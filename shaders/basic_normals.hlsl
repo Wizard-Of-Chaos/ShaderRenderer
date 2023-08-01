@@ -102,7 +102,14 @@ VertexOutput vertexMain(VertexInput input)
 {
     VertexOutput ret;
     
-    float percentageRenderDist = (RENDER_DISTANCE - length(CAMERA_POS - input.Position)) / RENDER_DISTANCE;
+    ret.Position = mul(mul(mul(input.Position, WORLD), VIEW), PROJ);
+    ret.Normal = normalize(mul(input.Normal, INV_TRANSPOSE));
+    ret.Tangent = normalize(mul(input.Tangent, INV_TRANSPOSE));
+    ret.Binormal = normalize(mul(input.Binormal, INV_TRANSPOSE));
+    ret.TextureCoordinate = input.TextureCoordinate;
+    ret.vertPosition = mul(input.Position, WORLD);
+    
+    float percentageRenderDist = (RENDER_DISTANCE - length(CAMERA_POS - ret.Position)) / RENDER_DISTANCE;
     float alpha = 1;
     if (percentageRenderDist > .8)
     {
@@ -111,12 +118,7 @@ VertexOutput vertexMain(VertexInput input)
     }
     ret.Color = input.Color;
     ret.Color.a = alpha;
-    ret.Position = mul(mul(mul(input.Position, WORLD), VIEW), PROJ);
-    ret.Normal = normalize(mul(input.Normal, INV_TRANSPOSE));
-    ret.Tangent = normalize(mul(input.Tangent, INV_TRANSPOSE));
-    ret.Binormal = normalize(mul(input.Binormal, INV_TRANSPOSE));
-    ret.TextureCoordinate = input.TextureCoordinate;
-    ret.vertPosition = mul(input.Position, WORLD);
+    
     ret.viewPosition = ret.Position;
     
     return ret;
